@@ -1,6 +1,6 @@
 const path = require('path')
 const fs = require('fs-extra')
-const chokidar = require('chokidar');
+const chokidar = require('chokidar')
 
 const {
   parseHosts,
@@ -13,7 +13,7 @@ const {
   objectToProcessEnv,
 } = require('./utils')
 
-module.exports = async bundler => {
+module.exports = async (bundler) => {
   const root = process.cwd()
   // load package.json
   const package = fs.readJsonSync(path.join(root, 'package.json'))
@@ -22,7 +22,10 @@ module.exports = async bundler => {
   // assign config values to process.env
   objectToProcessEnv(config)
   // only run when the process is the one bundling the .html file
-  if (bundler.entryFiles.length === 1 && path.extname(bundler.entryFiles[0]) === '.html') {
+  if (
+    bundler.entryFiles.length === 1 &&
+    path.extname(bundler.entryFiles[0]) === '.html'
+  ) {
     const htmlFilename = path.basename(bundler.entryFiles[0])
     const env = process.env.NODE_ENV
     const port =
@@ -33,8 +36,8 @@ module.exports = async bundler => {
     // listen for changes to the package.json (that might have gotten changes to cep config values) and re-bundle
     const watch = chokidar.watch(path.join(root, 'package.json'), {
       ignored: /(^|[\/\\])\../,
-      persistent: true
-    });
+      persistent: true,
+    })
     watch.on('change', (path) => {
       bundle()
     })
@@ -63,6 +66,7 @@ module.exports = async bundler => {
         debugInProduction: config.debugInProduction,
         lifecycle: config.lifecycle,
         out,
+        cepVersion: config.cepVersion,
       })
       await copyIcons({ bundler, config })
 
@@ -73,4 +77,3 @@ module.exports = async bundler => {
     }
   }
 }
-

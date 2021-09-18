@@ -10,21 +10,21 @@ const panelTemplate = require('./templates/panel')
 const debugTemplate = require('./templates/.debug')
 
 function templateDebug(formatter) {
-  return range(4, 16)
-    .map(formatter)
-    .join(os.EOL)
+  return range(4, 16).map(formatter).join(os.EOL)
 }
 
 function enablePlayerDebugMode() {
   // enable unsigned extensions for the foreseable future
   if (process.platform === 'darwin') {
     execSync(
-      templateDebug(i => `defaults write com.adobe.CSXS.${i} PlayerDebugMode 1`)
+      templateDebug(
+        (i) => `defaults write com.adobe.CSXS.${i} PlayerDebugMode 1`
+      )
     )
   } else if (process.platform === 'win32') {
     execSync(
       templateDebug(
-        i =>
+        (i) =>
           `REG ADD HKCU\\Software\\Adobe\\CSXS.${i} /f /v PlayerDebugMode /t REG_SZ /d 1`
       )
     )
@@ -35,12 +35,15 @@ function disablePlayerDebugMode() {
   // disable unsigned extensions for the foreseable future
   if (process.platform === 'darwin') {
     execSync(
-      templateDebug(i => `defaults write com.adobe.CSXS.${i} PlayerDebugMode 0`)
+      templateDebug(
+        (i) => `defaults write com.adobe.CSXS.${i} PlayerDebugMode 0`
+      )
     )
   } else if (process.platform === 'win32') {
     execSync(
       templateDebug(
-        i => `REG DELETE HKCU\\Software\\Adobe\\CSXS.${i} /f /v PlayerDebugMode`
+        (i) =>
+          `REG DELETE HKCU\\Software\\Adobe\\CSXS.${i} /f /v PlayerDebugMode`
       )
     )
   }
@@ -51,12 +54,15 @@ function camelToSnake(str) {
 }
 
 function isTruthy(str) {
-  return typeof str === 'string' && (str === '1' || str.toLowerCase() === 'true')
+  return (
+    typeof str === 'string' && (str === '1' || str.toLowerCase() === 'true')
+  )
 }
 
 function getConfig(package) {
-  const debugPortEnvs = Object.keys(process.env)
-    .filter((key) => key.indexOf('DEBUG_PORT_') === 0)
+  const debugPortEnvs = Object.keys(process.env).filter(
+    (key) => key.indexOf('DEBUG_PORT_') === 0
+  )
   const config = defaultsDeep(
     {
       bundleName: process.env.NAME,
@@ -69,12 +75,14 @@ function getConfig(package) {
       iconDarkRollover: process.env.ICON_DARK_ROLLOVER,
       panelWidth: process.env.PANEL_WIDTH,
       panelHeight: process.env.PANEL_HEIGHT,
-      debugPorts: debugPortEnvs.length > 0
-        ? debugPortEnvs.reduce((obj, key) => {
-          obj[key] = parseInt(process.env[key], 10)
-          return obj
-        }, {})
-        : undefined,
+      cepVersion: process.env.cepVersion,
+      debugPorts:
+        debugPortEnvs.length > 0
+          ? debugPortEnvs.reduce((obj, key) => {
+              obj[key] = parseInt(process.env[key], 10)
+              return obj
+            }, {})
+          : undefined,
       debugInProduction: isTruthy(process.env.DEBUG_IN_PRODUCTION),
     },
     {
@@ -92,6 +100,7 @@ function getConfig(package) {
       debugPorts: package.cep.debugPorts,
       debugInProduction: package.cep.debugInProduction,
       lifecycle: package.cep.lifecycle,
+      cepVersion: package.cep.cepVersion,
     },
     {
       bundleVersion: package.version,
@@ -103,6 +112,7 @@ function getConfig(package) {
       hosts: '*',
       panelWidth: 500,
       panelHeight: 500,
+      cepVersion: '7.0',
       debugInProduction: false,
       debugPorts: {
         PHXS: 3001,
@@ -118,7 +128,7 @@ function getConfig(package) {
         MUST: 3011,
         KBRG: 3012,
       },
-      lifecycle: {autoVisible: true, startOnEvents: []},
+      lifecycle: { autoVisible: true, startOnEvents: [] },
     }
   )
   return config
@@ -126,11 +136,12 @@ function getConfig(package) {
 
 function objectToProcessEnv(object) {
   // assign object to process.env so they can be used in the code
-  Object.keys(object).forEach(key => {
+  Object.keys(object).forEach((key) => {
     const envKey = camelToSnake(key).toUpperCase()
-    const value = typeof object[key] === 'string'
-      ? object[key]
-      : JSON.stringify(object[key])
+    const value =
+      typeof object[key] === 'string'
+        ? object[key]
+        : JSON.stringify(object[key])
     process.env[envKey] = value
   })
 }
@@ -153,6 +164,7 @@ async function writeExtensionTemplates({
   panelHeight,
   debugInProduction,
   lifecycle,
+  cepVersion,
 }) {
   const manifestContents = manifestTemplate({
     bundleName,
@@ -168,6 +180,7 @@ async function writeExtensionTemplates({
     panelWidth,
     panelHeight,
     lifecycle,
+    cepVersion,
   })
 
   await fs.ensureDir(path.join(out, 'CSXS'))
@@ -191,8 +204,8 @@ function parseHosts(hostsString) {
     hostsString = `PHXS, IDSN, AICY, ILST, PPRO, PRLD, AEFT, FLPR, AUDT, DRWV, MUST, KBRG`
   const hosts = hostsString
     .split(/(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])/)
-    .map(host => host.trim())
-    .map(host => {
+    .map((host) => host.trim())
+    .map((host) => {
       let [name, version] = host.split('@')
 
       if (version == '*' || !version) {
@@ -251,7 +264,9 @@ async function copyDependencies({ root, out, package }) {
     await copyDependencies({
       root,
       out,
-      package: fs.readJsonSync(path.join(root, 'node_modules', dep, 'package.json'))
+      package: fs.readJsonSync(
+        path.join(root, 'node_modules', dep, 'package.json')
+      ),
     })
   }
 }
@@ -264,14 +279,14 @@ async function copyIcons({ bundler, config }) {
     config.iconDarkNormal,
     config.iconDarkRollover,
   ]
-    .filter(icon => !!icon)
-    .map(icon => ({
+    .filter((icon) => !!icon)
+    .map((icon) => ({
       source: path.resolve(process.cwd(), icon),
       output: path.join(outDir, path.relative(process.cwd(), icon)),
     }))
 
   await Promise.all(
-    iconPaths.map(async icon => {
+    iconPaths.map(async (icon) => {
       try {
         await fs.copy(icon.source, icon.output)
       } catch (e) {
